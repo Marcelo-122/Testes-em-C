@@ -6,6 +6,11 @@
 #include "crypt_utils.h"
 #include "sodium.h"
 
+/**
+ * @brief Imprime as instruções de uso do programa, mostrando todos os comandos disponíveis.
+ * 
+ * @param prog_name O nome do executável (argv[0]).
+ */
 void print_usage(const char *prog_name) {
     printf("Sistema de Esteganografia com Compressão e Criptografia\n\n");
     printf("Uso:\n");
@@ -30,6 +35,10 @@ void print_usage(const char *prog_name) {
     printf("  %s extract foto_stego.bmp secreto_recuperado.txt\n", prog_name);
 }
 
+/**
+ * @brief Função para lidar com o comando 'compress'.
+ *        Comprime um arquivo usando a função compress_file.
+ */
 int cmd_compress(int argc, char *argv[]) {
     if (argc != 4) {
         fprintf(stderr, "Uso: %s compress <arquivo> <saida.z>\n", argv[0]);
@@ -44,6 +53,10 @@ int cmd_compress(int argc, char *argv[]) {
     return 1;
 }
 
+/**
+ * @brief Função para lidar com o comando 'decompress'.
+ *        Descomprime um arquivo usando a função decompress_file.
+ */
 int cmd_decompress(int argc, char *argv[]) {
     if (argc != 4) {
         fprintf(stderr, "Uso: %s decompress <arquivo.z> <saida>\n", argv[0]);
@@ -58,6 +71,10 @@ int cmd_decompress(int argc, char *argv[]) {
     return 1;
 }
 
+/**
+ * @brief Função para lidar com o comando 'encrypt'.
+ *        Criptografa um arquivo com uma senha.
+ */
 int cmd_encrypt(int argc, char *argv[]) {
     if (argc != 5) {
         fprintf(stderr, "Uso: %s encrypt <senha> <arquivo> <saida.enc>\n", argv[0]);
@@ -77,6 +94,10 @@ int cmd_encrypt(int argc, char *argv[]) {
     return 1;
 }
 
+/**
+ * @brief Função para lidar com o comando 'decrypt'.
+ *        Descriptografa um arquivo com uma senha.
+ */
 int cmd_decrypt(int argc, char *argv[]) {
     if (argc != 5) {
         fprintf(stderr, "Uso: %s decrypt <senha> <arquivo.enc> <saida>\n", argv[0]);
@@ -97,6 +118,10 @@ int cmd_decrypt(int argc, char *argv[]) {
     return 1;
 }
 
+/**
+ * @brief Função para lidar com o comando 'hide'.
+ *        Esconde um arquivo dentro de uma imagem BMP.
+ */
 int cmd_hide(int argc, char *argv[]) {
     if (argc != 5) {
         fprintf(stderr, "Uso: %s hide <imagem.bmp> <arquivo> <saida.bmp>\n", argv[0]);
@@ -111,6 +136,10 @@ int cmd_hide(int argc, char *argv[]) {
     return 1;
 }
 
+/**
+ * @brief Função para lidar com o comando 'extract'.
+ *        Extrai um arquivo escondido de uma imagem BMP.
+ */
 int cmd_extract(int argc, char *argv[]) {
     if (argc != 4) {
         fprintf(stderr, "Uso: %s extract <imagem.bmp> <saida>\n", argv[0]);
@@ -125,6 +154,10 @@ int cmd_extract(int argc, char *argv[]) {
     return 1;
 }
 
+/**
+ * @brief Função para lidar com o comando 'capacity'.
+ *        Verifica quantos bytes podem ser escondidos em uma imagem BMP.
+ */
 int cmd_capacity(int argc, char *argv[]) {
     if (argc != 3) {
         fprintf(stderr, "Uso: %s capacity <imagem.bmp>\n", argv[0]);
@@ -140,6 +173,10 @@ int cmd_capacity(int argc, char *argv[]) {
     return 1;
 }
 
+/**
+ * @brief Função para lidar com o comando 'full'.
+ *        Executa o processo completo: comprime, criptografa e esconde um arquivo em uma imagem.
+ */
 int cmd_full(int argc, char *argv[]) {
     if (argc != 6) {
         fprintf(stderr, "Uso: %s full <imagem.bmp> <arquivo> <saida.bmp> <senha>\n", argv[0]);
@@ -229,20 +266,31 @@ int cmd_full(int argc, char *argv[]) {
     return 0;
 }
 
+/**
+ * @brief Função principal do programa.
+ * 
+ * @param argc Número de argumentos da linha de comando.
+ * @param argv Vetor de strings com os argumentos.
+ * @return int 0 se sucesso, 1 se erro.
+ */
 int main(int argc, char *argv[]) {
-    // Inicializa libsodium
+    // Inicializa a biblioteca de criptografia libsodium. É essencial para garantir que a biblioteca está pronta para uso.
+
     if (sodium_init() < 0) {
         fprintf(stderr, "Erro critico: Nao foi possivel inicializar a libsodium!\n");
         return 1;
     }
     
+    // Verifica se pelo menos um comando foi fornecido.
     if (argc < 2) {
         print_usage(argv[0]);
         return 1;
     }
     
+    // Pega o comando principal (ex: "compress", "hide") a partir do primeiro argumento.
     const char *command = argv[1];
     
+    // Compara o comando fornecido e chama a função correspondente.
     if (strcmp(command, "compress") == 0) {
         return cmd_compress(argc, argv);
     }

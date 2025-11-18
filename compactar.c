@@ -3,16 +3,20 @@
 #include <stdlib.h>
 #include <zlib.h>
 
+/**
+ * @brief Comprime um buffer de dados na memória usando a biblioteca zlib.
+ */
 int compress_data(const unsigned char *input, size_t input_size, 
                   unsigned char **output, size_t *output_size) {
     if (!input || !output || !output_size) {
         return -1;
     }
 
-    // Calcula tamanho máximo do buffer de saída
+    // A função compressBound da zlib nos dá o tamanho máximo que os dados comprimidos podem ocupar no pior caso.
+    // Isso garante que nosso buffer de saída seja grande o suficiente.
     unsigned long max_size = compressBound(input_size);
     
-    // Aloca buffer de saída
+    // Aloca memória para o buffer que receberá os dados comprimidos.
     *output = (unsigned char *)malloc(max_size);
     if (!*output) {
         fprintf(stderr, "Erro ao alocar memória para compressão\n");
@@ -35,13 +39,17 @@ int compress_data(const unsigned char *input, size_t input_size,
     return 0;
 }
 
+/**
+ * @brief Descomprime um buffer de dados na memória usando a biblioteca zlib.
+ */
 int decompress_data(const unsigned char *input, size_t input_size,
                     unsigned char **output, size_t *output_size) {
     if (!input || !output || !output_size) {
         return -1;
     }
 
-    // Começa com buffer de 4x o tamanho comprimido
+    // Ao descomprimir, não sabemos o tamanho original exato. 
+    // Uma estratégia comum é começar com um buffer de tamanho estimado (ex: 4x o tamanho comprimido) e aumentá-lo se necessário.
     unsigned long buffer_size = input_size * 4;
     *output = (unsigned char *)malloc(buffer_size);
     if (!*output) {
@@ -49,10 +57,11 @@ int decompress_data(const unsigned char *input, size_t input_size,
         return -1;
     }
 
-    // Tenta descomprimir
+    // Tenta descomprimir os dados. A função `uncompress` da zlib faz o trabalho.
     int ret = uncompress(*output, &buffer_size, input, input_size);
     
-    // Se o buffer foi pequeno, aumenta e tenta novamente
+    // Se `uncompress` retornar `Z_BUF_ERROR`, significa que nosso buffer de saída não era grande o suficiente.
+    // O loop `while` dobra o tamanho do buffer e tenta novamente até que a descompressão seja bem-sucedida.
     while (ret == Z_BUF_ERROR) {
         buffer_size *= 2;
         unsigned char *new_buffer = (unsigned char *)realloc(*output, buffer_size);
@@ -77,6 +86,10 @@ int decompress_data(const unsigned char *input, size_t input_size,
     return 0;
 }
 
+/**
+ * @brief Função de conveniência para comprimir um arquivo inteiro.
+ *        Lê o arquivo, chama `compress_data` e salva o resultado.
+ */
 int compress_file(const char *input_path, const char *output_path) {
     FILE *in = fopen(input_path, "rb");
     if (!in) {
@@ -113,7 +126,7 @@ int compress_file(const char *input_path, const char *output_path) {
         return -1;
     }
 
-    // Salva arquivo comprimido
+    // Salva os dados comprimidos (que estão no `output_data`) em um novo arquivo.
     FILE *out = fopen(output_path, "wb");
     if (!out) {
         perror("Erro ao criar arquivo de saída");
@@ -141,6 +154,10 @@ int compress_file(const char *input_path, const char *output_path) {
     return 0;
 }
 
+/**
+ * @brief Função de conveniência para descomprimir um arquivo inteiro.
+ *        Lê o arquivo comprimido, chama `decompress_data` e salva o resultado.
+ */
 int decompress_file(const char *input_path, const char *output_path) {
     FILE *in = fopen(input_path, "rb");
     if (!in) {
@@ -168,7 +185,7 @@ int decompress_file(const char *input_path, const char *output_path) {
     }
     fclose(in);
 
-    // Descomprime
+    // Chama a função `decompress_data` para descomprimir o conteúdo do arquivo.
     unsigned char *output_data = NULL;
     size_t output_size = 0;
     
@@ -177,7 +194,7 @@ int decompress_file(const char *input_path, const char *output_path) {
         return -1;
     }
 
-    // Salva arquivo descomprimido
+    // Salva os dados descomprimidos em um novo arquivo.
     FILE *out = fopen(output_path, "wb");
     if (!out) {
         perror("Erro ao criar arquivo de saída");
