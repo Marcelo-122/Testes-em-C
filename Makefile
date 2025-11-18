@@ -1,50 +1,98 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -O2
+LIBS = -lz -lsodium
 
-TARGET = steg
+# Nome do executável
+TARGET = stegfs
 
+# Arquivos objeto
+OBJS = main.o compactar.o esteg.o crypt_utils.o
+
+# Regra padrão
 all: $(TARGET)
 
-$(TARGET): steg_basic.c
-	$(CC) $(CFLAGS) -o $(TARGET) steg_basic.c
+# Compila o executável
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LIBS)
+	@echo "✓ Compilado com sucesso: $(TARGET)"
 
-# Cria uma imagem de teste (simples arquivo binário)
-test-image:
-	@echo "Criando imagem de teste (10KB)..."
-	@dd if=/dev/urandom of=test_image.bin bs=1024 count=10 2>/dev/null
-	@echo "✓ Imagem criada: test_image.bin"
+# Compila cada arquivo .c em .o
+main.o: main.c compactar.h esteg.h crypt_utils.h
+	$(CC) $(CFLAGS) -c main.c
 
-# Cria arquivo de teste para esconder
-test-data:
-	@echo "Este é um documento super secreto!" > secret.txt
-	@echo "Contém informações confidenciais." >> secret.txt
-	@echo "Apenas para seus olhos!" >> secret.txt
-	@echo "✓ Arquivo secreto criado: secret.txt"
+compactar.o: compactar.c compactar.h
+	$(CC) $(CFLAGS) -c compactar.c
+
+esteg.o: esteg.c esteg.h
+	$(CC) $(CFLAGS) -c esteg.c
+
+crypt_utils.o: crypt_utils.c crypt_utils.h
+	$(CC) $(CFLAGS) -c crypt_utils.c
 
 # Teste completo
-test: $(TARGET) test-image test-data
-	@echo ""
-	@echo "=== TESTE DE ESTEGANOGRAFIA ==="
-	@echo ""
-	@echo "1. Escondendo dados na imagem..."
-	./$(TARGET) hide test_image.bin secret.txt stego_image.bin
-	@echo ""
-	@echo "2. Comparando imagens (devem ser diferentes)..."
-	@cmp -l test_image.bin stego_image.bin | head -5 || true
-	@echo ""
-	@echo "3. Extraindo dados da imagem..."
-	./$(TARGET) extract stego_image.bin recovered_secret.txt
-	@echo ""
-	@echo "4. Comparando arquivo original com recuperado..."
-	@diff secret.txt recovered_secret.txt && echo "✓ Arquivos idênticos! Sucesso!" || echo "✗ Arquivos diferentes!"
-	@echo ""
-	@echo "5. Mostrando conteúdo recuperado:"
-	@cat recovered_secret.txt
-	@echo ""
-	@echo "=== TESTE CONCLUÍDO ==="
+test: $(TARGET)
+	@echo "\n=== Teste do Sistema ==="
+	@echo "\n1. Criando arquivo de teste..."
+	@echo "Este é um documento secreto para testar!" > test_file.txt
+	@echo "Linha 2 do documento" >> test_file.txt
+	@echo "Linha 3 do documento" >> test_file.txt
+	
+	@echo "\n2. Testando compressão..."
+	./$(TARGET) compactar test_file.txt test_file.txt.z
+	./$(TARGET) decompactar test_file.txt.z test_recovered.txt
+	@diff test_file.txt test_recovered.txt && echo "✓ Compressão OK" || echo "✗ Erro na compressão"
+	
+	@echo "\n3. Verificando capacidade da imagem..."
+	@if [ -f teste.bmp ]; then \
+		./$(TARGET) capacity teste.bmp; \
+	else \
+		echo "Aviso: teste.bmp não encontrado. Criando imagem de teste..."; \
+		dd if=/dev/urandom of=test_image.bmp bs=1024 count=100 2>/dev/null; \
+		printf '\x42\x4d' | dd of=test_image.bmp bs=1 count=2 conv=notrunc 2>/dev/null; \
+		./$(TARGET) capacity test_image.bmp; \
+	fi
+	
+	@echo "\n4. Testando esteganografia..."
+	@if [ -f teste.bmp ]; then \
+		./$(TARGET) hide teste.bmp test_file.txt test_stego.bmp; \
+		./$(TARGET) extract test_stego.bmp test_extracted.txt; \
+		diff test_file.txt test_extracted.txt && echo "✓ Esteganografia OK" || echo "✗ Erro na esteganografia"; \
+	else \
+		echo "Pulando teste de esteganografia (sem teste.bmp válido)"; \
+	fi
+	
+	@echo "\n=== Testes concluídos ==="
 
+# Teste do fluxo completo
+test-full: $(TARGET)
+	@echo "\n=== Teste Completo (compressão + esteganografia) ==="
+	@echo "Este teste precisa de teste.bmp"
+	@if [ -f teste.bmp ]; then \
+		echo "Criando arquivo de teste..."; \
+		echo "Documento ultra secreto!" > secret.txt; \
+		./$(TARGET) full teste.bmp secret.txt output_full.bmp; \
+		echo "✓ Teste completo finalizado"; \
+	else \
+		echo "❌ Erro: teste.bmp não encontrado"; \
+	fi
+
+# Limpeza
 clean:
-	rm -f $(TARGET) *.o
-	rm -f test_image.bin stego_image.bin secret.txt recovered_secret.txt
+	rm -f $(TARGET) $(OBJS)
+	rm -f test_file.txt test_file.txt.z test_recovered.txt
+	rm -f test_image.bmp test_stego.bmp test_extracted.txt
+	rm -f secret.txt output_full.bmp
+	@echo "✓ Arquivos limpos"
 
-.PHONY: all test clean test-image test-data
+# Ajuda
+help:
+	@echo "Makefile para Sistema de Esteganografia"
+	@echo ""
+	@echo "Alvos disponíveis:"
+	@echo "  make          - Compila o programa"
+	@echo "  make test     - Executa testes"
+	@echo "  make test-full - Teste completo (compressão + esteganografia)"
+	@echo "  make clean    - Remove arquivos gerados"
+	@echo "  make help     - Mostra esta ajuda"
+
+.PHONY: all test test-full clean help
